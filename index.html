@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Monopoly Bankası">
+<meta name="theme-color" content="#185FA5">
+<title>Monopoly Bankası</title>
+
+<!-- ══════════════════════════════════════════
+     🔧 FIREBASE AYARLARI — BURAYA YAPIŞTIR
+     firebase.google.com > Proje > Proje Ayarları
+     > Uygulamalarım > Web Uygulaması > Config
+════════════════════════════════════════════ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC-UX4KoO36pK72ugQiiA2QIv8QOFA2KPM",
+  authDomain: "monopoly-5d72d.firebaseapp.com",
+  databaseURL: "https://monopoly-5d72d-default-rtdb.firebaseio.com",
+  projectId: "monopoly-5d72d",
+  storageBucket: "monopoly-5d72d.firebasestorage.app",
+  messagingSenderId: "190475634413",
+  appId: "1:190475634413:web:b7c005f7f04c8c281b2ee4"
+};
+
+// Admin şifresi — istersen değiştir
+const ADMIN_PASSWORD = "1234";
+</script>
+<!-- ══════════════════════════════════════════ -->
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f7;color:#1a1a1a;font-size:15px}
+#app{height:100%;display:flex;flex-direction:column}
+.screen{display:none;flex:1;overflow-y:auto;padding:16px;padding-bottom:32px}
+.screen.active{display:block}
+
+/* HEADER */
+.topbar{background:#185FA5;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:600}
+.topbar-sub{font-size:12px;opacity:.8}
+.topbar-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer}
+
+/* CARDS */
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card-title{font-size:14px;font-weight:600;color:#666;margin-bottom:12px;text-transform:uppercase;letter-spacing:.4px}
+
+/* BUTTONS */
+.btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-blue{background:#185FA5;color:#fff}
+.btn-blue:disabled{background:#a0bcd8;cursor:not-allowed;transform:none}
+.btn-red{background:#e53e3e;color:#fff}
+.btn-gray{background:#e8e8e8;color:#333;margin-top:8px}
+.btn-sm{width:auto;padding:8px 16px;font-size:13px;border-radius:8px}
+
+/* INPUTS */
+input,select{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:15px;background:#fff;color:#1a1a1a;outline:none;margin-bottom:10px;-webkit-appearance:none}
+input:focus,select:focus{border-color:#185FA5}
+label{font-size:13px;color:#666;display:block;margin-bottom:4px;font-weight:500}
+
+/* LOGIN */
+.login-header{text-align:center;padding:24px 0 16px}
+.login-icon{font-size:56px;margin-bottom:8px}
+.login-title{font-size:24px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:14px;color:#888}
+.account-btn{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .1s}
+.account-btn:active{transform:scale(.97)}
+.account-btn.admin-btn{border:2px solid #185FA5}
+
+/* AVATAR */
+.av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.av-0{background:#dbeafe;color:#1e40af}
+.av-1{background:#d1fae5;color:#065f46}
+.av-2{background:#ffe4e6;color:#9f1239}
+.av-3{background:#fef3c7;color:#92400e}
+.av-4{background:#ede9fe;color:#5b21b6}
+.av-5{background:#fce7f3;color:#9d174d}
+.av-6{background:#ccfbf1;color:#134e4a}
+.av-admin{background:#185FA5;color:#fff}
+
+/* BALANCE */
+.balance-card{background:linear-gradient(135deg,#185FA5,#0c3f75);color:#fff;border-radius:16px;padding:24px;margin-bottom:12px;text-align:center}
+.balance-label{font-size:13px;opacity:.8;margin-bottom:4px}
+.balance-amount{font-size:38px;font-weight:700;letter-spacing:-1px}
+.balance-status{display:inline-block;margin-top:8px;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600}
+.s-ok{background:rgba(255,255,255,.25);color:#fff}
+.s-zero{background:#fbbf24;color:#78350f}
+.s-neg{background:#ef4444;color:#fff}
+
+/* TAB BAR */
+.tabbar{display:flex;background:#fff;border-top:1px solid #e8e8e8;position:sticky;bottom:0;z-index:10;flex-shrink:0}
+.tabbar-btn{flex:1;padding:10px 4px 12px;border:none;background:transparent;font-size:10px;color:#999;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;transition:color .15s}
+.tabbar-btn.active{color:#185FA5}
+.tabbar-btn .icon{font-size:22px}
+
+/* PLAYER LIST */
+.player-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.player-row:last-child{border-bottom:none}
+.player-info{display:flex;align-items:center;gap:10px}
+.player-name{font-size:14px;font-weight:600}
+.player-sub{font-size:12px;color:#888}
+.player-bal{font-size:15px;font-weight:700;text-align:right}
+
+/* TX LIST */
+.tx-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5}
+.tx-row:last-child{border-bottom:none}
+.tx-name{font-size:14px;font-weight:500}
+.tx-sub{font-size:12px;color:#888;margin-top:1px}
+.tx-pos{color:#16a34a;font-weight:700;font-size:15px}
+.tx-neg{color:#dc2626;font-weight:700;font-size:15px}
+
+/* ALERTS */
+.alert{padding:12px 14px;border-radius:10px;font-size:14px;margin-bottom:10px;font-weight:500}
+.alert-red{background:#fee2e2;color:#991b1b}
+.alert-green{background:#dcfce7;color:#166534}
+
+/* MISC */
+.sep{height:1px;background:#f0f0f0;margin:12px 0}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.b-green{background:#dcfce7;color:#166534}
+.b-amber{background:#fef9c3;color:#854d0e}
+.b-red{background:#fee2e2;color:#991b1b}
+.empty{text-align:center;color:#aaa;padding:24px 0;font-size:14px}
+.spinner{text-align:center;padding:32px;color:#888}
+.section-lbl{font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;margin-top:4px}
+
+/* ADMIN SETUP FORM */
+.setup-player-item{display:flex;align-items:center;gap:10px;padding:10px;background:#f8f8f8;border-radius:10px;margin-bottom:6px}
+.del-btn{background:#fee2e2;border:none;color:#dc2626;width:32px;height:32px;border-radius:8px;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px}
+
+/* PWA INSTALL */
+.install-banner{background:#e0f2fe;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#0369a1;display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar" id="topbar" style="display:none">
+    <div>
+      <div class="topbar-title" id="topbar-title">🏦 Monopoly Bankası</div>
+      <div class="topbar-sub" id="topbar-sub"></div>
+    </div>
+    <button class="topbar-btn" id="topbar-action" onclick="logout()">Çıkış</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen active" id="s-login">
+    <div class="login-header">
+      <div class="login-icon">🏦</div>
+      <div class="login-title">Monopoly Bankası</div>
+      <div class="login-sub">Hesabınızı seçin</div>
+    </div>
+    <div id="login-list"><div class="spinner">⏳ Bekleniyor...</div></div>
+  </div>
+
+  <!-- ADMIN PASSWORD -->
+  <div class="screen" id="s-adminpw">
+    <div style="padding-top:32px">
+      <div class="login-header">
+        <div class="login-icon">🔐</div>
+        <div class="login-title">Admin Girişi</div>
+        <div class="login-sub">Yönetici şifresini girin</div>
+      </div>
+      <div class="card">
+        <label>Şifre</label>
+        <input type="password" id="admin-pw-input" placeholder="Şifre" onkeydown="if(event.key==='Enter')checkAdminPw()">
+        <div id="admin-pw-err" class="alert alert-red" style="display:none">Şifre yanlış!</div>
+        <button class="btn btn-blue" onclick="checkAdminPw()">Giriş Yap</button>
+        <button class="btn btn-gray" onclick="showLogin()">← Geri</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN SETUP (ilk kurulum) -->
+  <div class="screen" id="s-setup">
+    <div style="padding-top:8px">
+      <div class="card">
+        <div class="card-title">🎮 Oyun Kurulumu</div>
+        <label>Kasa başlangıç bakiyesi (₺)</label>
+        <input type="number" id="setup-treasury" value="150000" min="0">
+        <label>Admin kendi başlangıç bakiyesi (₺)</label>
+        <input type="number" id="setup-adminbal" value="15000" min="0">
+      </div>
+      <div class="card">
+        <div class="card-title">👥 Oyuncular</div>
+        <div id="setup-players"></div>
+        <div class="sep"></div>
+        <label>Ad</label>
+        <input type="text" id="setup-new-name" placeholder="Oyuncu adı" onkeydown="if(event.key==='Enter')setupAddPlayer()">
+        <label>Başlangıç bakiyesi (₺)</label>
+        <input type="number" id="setup-new-bal" value="15000" min="0">
+        <button class="btn btn-gray btn-sm" style="width:auto" onclick="setupAddPlayer()">+ Oyuncu Ekle</button>
+      </div>
+      <div id="setup-err" class="alert alert-red" style="display:none"></div>
+      <button class="btn btn-blue" onclick="startGame()">🚀 Oyunu Başlat</button>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div class="screen" id="s-admin"></div>
+
+  <!-- PLAYER PANEL -->
+  <div class="screen" id="s-player"></div>
+
+  <!-- TAB BAR (admin & player) -->
+  <div class="tabbar" id="tabbar" style="display:none">
+    <button class="tabbar-btn active" id="tb0" onclick="switchTab(0)">
+      <span class="icon">🏠</span>Genel
+    </button>
+    <button class="tabbar-btn" id="tb1" onclick="switchTab(1)">
+      <span class="icon">💸</span>Gönder
+    </button>
+    <button class="tabbar-btn" id="tb2" onclick="switchTab(2)">
+      <span class="icon">👥</span>Bakiyeler
+    </button>
+    <button class="tabbar-btn" id="tb3" onclick="switchTab(3)">
+      <span class="icon">📋</span>İşlemler
+    </button>
+    <button class="tabbar-btn" id="tb4" onclick="switchTab(4)" style="display:none">
+      <span class="icon">⚙️</span>Yönet
+    </button>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center">
+    <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px">
+      <div style="font-size:17px;font-weight:700;margin-bottom:8px" id="confirm-title">Emin misiniz?</div>
+      <div style="font-size:14px;color:#666;margin-bottom:20px" id="confirm-msg"></div>
+      <button class="btn btn-red" id="confirm-ok">Evet, devam et</button>
+      <button class="btn btn-gray" onclick="closeConfirm()">İptal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// ── Firebase init ──────────────────────────────────────────
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+const gameRef = db.ref('monopoly_game');
+
+// ── State ──────────────────────────────────────────────────
+let gameState = null;  // live from Firebase
+let meRole = null;     // 'admin' | 'player'
+let meIdx = null;      // player index
+let currentTab = 0;
+let setupPlayers = [];
+
+// ── Helpers ────────────────────────────────────────────────
+const fmt = n => '₺' + Number(n).toLocaleString('tr-TR');
+const initials = name => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const colClass = i => 'av-' + (i % 7);
+const ts = () => new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}) + ' ' + new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'});
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function hide(id){ document.getElementById(id).style.display='none'; }
+function el(id){ return document.getElementById(id); }
+
+function getBalance(key) {
+  if(!gameState) return 0;
+  if(key==='treasury') return gameState.treasury||0;
+  if(key==='adminSelf') return gameState.adminSelf||0;
+  return (gameState.players && gameState.players[parseInt(key)])
+    ? gameState.players[parseInt(key)].balance : 0;
+}
+function getName(key) {
+  if(key==='treasury') return 'Kasa';
+  if(key==='adminSelf') return 'Admin (Kendi)';
+  return gameState.players[parseInt(key)]?.name || '?';
+}
+function allAccounts() {
+  const list = [
+    {key:'treasury', name:'Kasa', av:'av-admin', label:'🏦'},
+    {key:'adminSelf', name:'Admin (Kendi)', av:'av-admin', label:'👤'},
+  ];
+  (gameState.players||[]).forEach((p,i)=>{
+    list.push({key:''+i, name:p.name, av:colClass(i), label:initials(p.name)});
+  });
+  return list;
+}
+
+// ── Firebase listeners ─────────────────────────────────────
+function startListening() {
+  gameRef.on('value', snap => {
+    gameState = snap.val();
+    if(!gameState || !gameState.started) {
+      // oyun henüz kurulmamış
+      if(meRole === 'admin') { show('s-setup'); el('tabbar').style.display='none'; el('topbar').style.display='flex'; }
+      else { showLogin(); }
+      return;
+    }
+    if(meRole) refreshCurrentView();
+    else showLogin();
+  });
+}
+
+// ── LOGIN ──────────────────────────────────────────────────
+function showLogin() {
+  meRole = null; meIdx = null;
+  el('topbar').style.display = 'none';
+  el('tabbar').style.display = 'none';
+  show('s-login');
+  renderLoginList();
+}
+
+function renderLoginList() {
+  if(!gameState || !gameState.started) {
+    el('login-list').innerHTML = `
+      <div class="account-btn admin-btn" onclick="goAdminPw()">
+        <div class="av av-admin">🏦</div>
+        <div><div style="font-weight:700">Admin (Kasa Yönetimi)</div>
+        <div style="font-size:12px;color:#666">Oyunu kur ve yönet</div></div>
+      </div>
+      <div class="empty">Henüz oyun kurulmadı.<br>Admin olarak giriş yapıp kurulumu tamamla.</div>`;
+    return;
+  }
+  let h = `<div class="account-btn admin-btn" onclick="goAdminPw()">
+    <div class="av av-admin">🏦</div>
+    <div><div style="font-weight:700">Admin (Kasa Yönetimi)</div>
+    <div style="font-size:12px;color:#666">Kasa + kendi hesabı</div></div>
+  </div>
+  <div class="section-lbl" style="margin-top:12px">Oyuncular</div>`;
+  (gameState.players||[]).forEach((p,i)=>{
+    h+=`<div class="account-btn" onclick="loginAsPlayer(${i})">
+      <div class="av ${colClass(i)}">${initials(p.name)}</div>
+      <div><div style="font-weight:600">${p.name}</div>
+      <div style="font-size:12px;color:#888">Oyuncu</div></div>
+    </div>`;
+  });
+  el('login-list').innerHTML = h;
+}
+
+function goAdminPw() {
+  el('admin-pw-input').value='';
+  el('admin-pw-err').style.display='none';
+  show('s-adminpw');
+}
+function checkAdminPw() {
+  if(el('admin-pw-input').value === ADMIN_PASSWORD) {
+    loginAsAdmin();
+  } else {
+    el('admin-pw-err').style.display='block';
+  }
+}
+
+function loginAsAdmin() {
+  meRole='admin'; meIdx=null;
+  el('topbar').style.display='flex';
+  el('topbar-title').textContent='🏦 Monopoly Bankası';
+  el('topbar-sub').textContent='Admin Paneli';
+  el('topbar-action').textContent='Çıkış';
+  if(!gameState || !gameState.started) {
+    el('tabbar').style.display='none';
+    show('s-setup');
+    renderSetupPlayers();
+  } else {
+    el('tabbar').style.display='flex';
+    currentTab=0; updateTabBar();
+    renderAdminView();
+  }
+}
+
+function loginAsPlayer(idx) {
+  meRole='player'; meIdx=idx;
+  const p = gameState.players[idx];
+  el('topbar').style.display='flex';
+  el('topbar-title').textContent=p.name;
+  el('topbar-sub').textContent='Oyuncu Hesabı';
+  el('topbar-action').textContent='Çıkış';
+  el('tabbar').style.display='flex';
+  currentTab=0; updateTabBar();
+  renderPlayerView();
+  show('s-player');
+}
+
+function logout() {
+  meRole=null; meIdx=null;
+  showLogin();
+}
+
+// ── SETUP ──────────────────────────────────────────────────
+function renderSetupPlayers() {
+  const c = el('setup-players');
+  if(!setupPlayers.length){c.innerHTML='<div class="empty">Henüz oyuncu eklenmedi.</div>';return;}
+  c.innerHTML = setupPlayers.map((p,i)=>`
+    <div class="setup-player-item">
+      <div class="av ${colClass(i)}">${initials(p.name)}</div>
+      <div style="flex:1"><div style="font-weight:600">${p.name}</div><div style="font-size:12px;color:#888">${fmt(p.balance)}</div></div>
+      <button class="del-btn" onclick="setupPlayers.splice(${i},1);renderSetupPlayers()">×</button>
+    </div>`).join('');
+}
+
+function setupAddPlayer() {
+  const name = el('setup-new-name').value.trim();
+  const bal = parseInt(el('setup-new-bal').value)||0;
+  if(!name) return;
+  setupPlayers.push({name, balance:bal});
+  el('setup-new-name').value='';
+  renderSetupPlayers();
+}
+
+function startGame() {
+  const errEl = el('setup-err');
+  if(!setupPlayers.length){errEl.textContent='En az 1 oyuncu ekle.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  const data = {
+    started: true,
+    treasury: parseInt(el('setup-treasury').value)||0,
+    adminSelf: parseInt(el('setup-adminbal').value)||0,
+    players: setupPlayers,
+    transactions: []
+  };
+  gameRef.set(data).then(()=>{
+    el('tabbar').style.display='flex';
+    currentTab=0; updateTabBar();
+    renderAdminView();
+  });
+}
+
+// ── TABS ───────────────────────────────────────────────────
+function updateTabBar() {
+  const isAdmin = meRole==='admin';
+  el('tb4').style.display = isAdmin ? 'flex' : 'none';
+  const count = isAdmin ? 5 : 4;
+  for(let i=0;i<count;i++) {
+    el('tb'+i).className = 'tabbar-btn' + (i===currentTab?' active':'');
+  }
+}
+function switchTab(i) {
+  currentTab=i; updateTabBar();
+  if(meRole==='admin') renderAdminView();
+  else renderPlayerView();
+}
+
+function refreshCurrentView() {
+  if(meRole==='admin') renderAdminView();
+  else if(meRole==='player') renderPlayerView();
+}
+
+// ── ADMIN VIEW ─────────────────────────────────────────────
+function renderAdminView() {
+  show('s-admin');
+  if(currentTab===0) renderAdminOverview();
+  else if(currentTab===1) renderAdminTransfer();
+  else if(currentTab===2) renderAllBalances('s-admin');
+  else if(currentTab===3) renderAllTransactions();
+  else if(currentTab===4) renderAdminManage();
+}
+
+function renderAdminOverview() {
+  el('s-admin').innerHTML = `
+    <div style="padding:16px 16px 32px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="card" style="text-align:center;margin-bottom:0">
+          <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px">Kasa</div>
+          <div style="font-size:22px;font-weight:700;color:#185FA5">${fmt(getBalance('treasury'))}</div>
+        </div>
+        <div class="card" style="text-align:center;margin-bottom:0">
+          <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px">Hesabım</div>
+          <div style="font-size:22px;font-weight:700;color:#185FA5">${fmt(getBalance('adminSelf'))}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Oyuncular</div>
+        ${(gameState.players||[]).map((p,i)=>`
+          <div class="player-row">
+            <div class="player-info">
+              <div class="av ${colClass(i)}">${initials(p.name)}</div>
+              <div><div class="player-name">${p.name}</div></div>
+            </div>
+            <div>
+              <div class="player-bal">${fmt(p.balance)}</div>
+              <span class="badge ${p.balance>0?'b-green':p.balance===0?'b-amber':'b-red'}" style="float:right">
+                ${p.balance>0?'Aktif':p.balance===0?'Sıfır':'Eksik'}
+              </span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderAdminTransfer() {
+  const accs = allAccounts();
+  const opts = accs.map(a=>`<option value="${a.key}">${a.name} (${fmt(getBalance(a.key))})</option>`).join('');
+  el('s-admin').innerHTML = `
+    <div style="padding:16px 16px 32px">
+      <div class="card">
+        <div class="card-title">💸 Para Transferi</div>
+        <label>Gönderen</label>
+        <select id="tr-from">${opts}</select>
+        <label>Alıcı</label>
+        <select id="tr-to">${opts}</select>
+        <label>Tutar (₺)</label>
+        <input type="number" id="tr-amount" placeholder="0" min="1" inputmode="numeric">
+        <label>Açıklama</label>
+        <input type="text" id="tr-desc" placeholder="Kira, Vergi, Maaş...">
+        <div id="tr-err" class="alert alert-red" style="display:none"></div>
+        <button class="btn btn-blue" onclick="doTransfer()">Gönder</button>
+        <div id="tr-ok" class="alert alert-green" style="display:none"></div>
+      </div>
+    </div>`;
+  // default to farklı seç
+  const toSel = el('tr-to');
+  if(accs.length>1) toSel.value = accs[1].key;
+}
+
+function doTransfer(fromOverride, toOverride, isPlayer) {
+  const from = fromOverride || el('tr-from')?.value;
+  const to   = toOverride   || el('tr-to')?.value;
+  const amount = parseInt(el('tr-amount')?.value || el('pl-amount')?.value)||0;
+  const desc = (el('tr-desc')||el('pl-desc'))?.value.trim()||'—';
+  const errId = isPlayer?'pl-err':'tr-err';
+  const okId  = isPlayer?'pl-ok':'tr-ok';
+  el(errId).style.display='none';
+  if(el(okId)) el(okId).style.display='none';
+
+  if(from===to){showErr(errId,'Gönderen ve alıcı aynı olamaz.');return;}
+  if(amount<=0){showErr(errId,'Geçerli bir tutar girin.');return;}
+  const fb = getBalance(from);
+  if(fb < amount){showErr(errId,`${getName(from)} hesabında yeterli bakiye yok (${fmt(fb)}).`);return;}
+
+  // Firebase güncellemesi
+  const updates = {};
+  const newFromBal = fb - amount;
+  const newToBal   = getBalance(to) + amount;
+  if(from==='treasury') updates['monopoly_game/treasury'] = newFromBal;
+  else if(from==='adminSelf') updates['monopoly_game/adminSelf'] = newFromBal;
+  else updates[`monopoly_game/players/${from}/balance`] = newFromBal;
+  if(to==='treasury') updates['monopoly_game/treasury'] = newToBal;
+  else if(to==='adminSelf') updates['monopoly_game/adminSelf'] = newToBal;
+  else updates[`monopoly_game/players/${to}/balance`] = newToBal;
+
+  // transaction ekle
+  const txKey = Date.now();
+  updates[`monopoly_game/transactions/${txKey}`] = {from, to, amount, desc, time: ts()};
+
+  db.ref().update(updates).then(()=>{
+    if(el('tr-amount')) el('tr-amount').value='';
+    if(el('pl-amount')) el('pl-amount').value='';
+    if(el('tr-desc'))   el('tr-desc').value='';
+    if(el('pl-desc'))   el('pl-desc').value='';
+    showOk(okId, `✓ ${fmt(amount)} → ${getName(to)}`);
+  });
+}
+
+function showErr(id, msg){const e=el(id);if(e){e.textContent=msg;e.style.display='block';}}
+function showOk(id, msg){const e=el(id);if(e){e.textContent=msg;e.style.display='block';setTimeout(()=>e.style.display='none',3000);}}
+
+function renderAllBalances(containerId) {
+  const accs = allAccounts();
+  const myKey = meRole==='player'?''+meIdx:null;
+  el(containerId).innerHTML = `
+    <div style="padding:16px 16px 32px">
+      <div class="card">
+        <div class="card-title">👥 Tüm Bakiyeler</div>
+        ${accs.map(a=>{
+          const bal=getBalance(a.key);
+          const isMe = a.key===myKey;
+          return`<div class="player-row" style="${isMe?'background:#eff6ff;border-radius:8px;padding:4px 8px;margin:-4px -8px':''}">
+            <div class="player-info">
+              <div class="av ${a.av}">${a.label}</div>
+              <div><div class="player-name">${a.name}${isMe?' <span style="font-size:11px;color:#185FA5">(ben)</span>':''}</div></div>
+            </div>
+            <div>
+              <div class="player-bal">${fmt(bal)}</div>
+              <span class="badge ${bal>0?'b-green':bal===0?'b-amber':'b-red'}" style="float:right">
+                ${bal>0?'Aktif':bal===0?'Sıfır':'Eksik'}
+              </span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderAllTransactions() {
+  const txObj = gameState.transactions || {};
+  const txList = Object.values(txObj).reverse();
+  el('s-admin').innerHTML = `
+    <div style="padding:16px 16px 32px">
+      <div class="card">
+        <div class="card-title">📋 Tüm İşlemler</div>
+        ${!txList.length?'<div class="empty">Henüz işlem yok.</div>':
+          txList.map(tx=>`
+            <div class="tx-row">
+              <div>
+                <div class="tx-name">${getName(tx.from)} → ${getName(tx.to)}</div>
+                <div class="tx-sub">${tx.desc} · ${tx.time}</div>
+              </div>
+              <div class="tx-neg">${fmt(tx.amount)}</div>
+            </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── PLAYER VIEW ────────────────────────────────────────────
+function renderPlayerView() {
+  show('s-player');
+  if(currentTab===0) renderPlayerOverview();
+  else if(currentTab===1) renderPlayerSend();
+  else if(currentTab===2) renderAllBalances('s-player');
+  else if(currentTab===3) renderPlayerHistory();
+}
+
+function renderPlayerOverview() {
+  const p = gameState.players[meIdx];
+  const bal = p.balance;
+  const statusClass = bal>0?'s-ok':bal===0?'s-zero':'s-neg';
+  const statusText  = bal>0?'✓ Aktif':bal===0?'⚠ Sıfır':'✗ Eksik';
+  el('s-player').innerHTML = `
+    <div style="padding:16px 16px 32px">
+      <div class="balance-card">
+        <div class="balance-label">Bakiyeniz</div>
+        <div class="balance-amount">${fmt(bal)}</div>
+        <span class="balance-status ${statusClass}">${statusText}</span>
+      </div>
+      <div class="card">
+        <div class="card-title">Son İşlemler</div>
+        ${renderMyTxInner(3)}
+      </div>
+    </div>`;
+}
+
+function renderPlayerSend() {
+  const p = gameState.players[meIdx];
+  const canSend = p.balance > 0;
+  const accs = allAccounts().filter(a=>a.key!==''+meIdx);
+  const opts = accs.map(a=>`<option value="${a.key}">${a.name} (${fmt(getBalance(a.key))})</option>`).join('');
+  el('s-player').innerHTML = `
+    <div style="padding:16px 16px 32px">
+      ${!canSend?`<div class="alert alert-red">Bakiyeniz 0 veya eksik — transfer yapamazsınız.</div>`:''}
+      <div class="card">
+        <div class="card-title">💸 Para Gönder</div>
+        <label>Alıcı</label>
+        <select id="pl-to">${opts}</select>
+        <label>Tutar (₺)</label>
+        <input type="number" id="pl-amount" placeholder="0" min="1" inputmode="numeric" ${!canSend?'disabled':''}>
+        <label>Açıklama</label>
+        <input type="text" id="pl-desc" placeholder="Kira, Ticaret..." ${!canSend?'disabled':''}>
+        <div id="pl-err" class="alert alert-red" style="display:none"></div>
+        <button class="btn btn-blue" onclick="playerSend()" ${!canSend?'disabled':''}>Gönder</button>
+        <div id="pl-ok" class="alert alert-green" style="display:none"></div>
+      </div>
+    </div>`;
+}
+
+function playerSend() {
+  const from = ''+meIdx;
+  const to   = el('pl-to').value;
+  doTransfer(from, to, true);
+}
+
+function renderMyTxInner(limit) {
+  const txObj = gameState.transactions || {};
+  const myKey = ''+meIdx;
+  const all = Object.values(txObj).reverse().filter(t=>t.from===myKey||t.to===myKey);
+  const list = limit ? all.slice(0,limit) : all;
+  if(!list.length) return '<div class="empty">Henüz işlem yok.</div>';
+  return list.map(tx=>{
+    const isSend = tx.from===myKey;
+    return`<div class="tx-row">
+      <div>
+        <div class="tx-name">${isSend?'→ '+getName(tx.to):'← '+getName(tx.from)}</div>
+        <div class="tx-sub">${tx.desc} · ${tx.time}</div>
+      </div>
+      <div class="${isSend?'tx-neg':'tx-pos'}">${isSend?'-':'+'}${fmt(tx.amount)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPlayerHistory() {
+  el('s-player').innerHTML = `
+    <div style="padding:16px 16px 32px">
+      <div class="card">
+        <div class="card-title">📋 İşlem Geçmişim</div>
+        ${renderMyTxInner(0)}
+      </div>
+    </div>`;
+}
+
+// ── ADMIN MANAGE ───────────────────────────────────────────
+let addPlayerTemp = [];
+
+function renderAdminManage() {
+  el('s-admin').innerHTML = `
+    <div style="padding:16px 16px 80px">
+
+      <div class="card">
+        <div class="card-title">➕ Oyuncu Ekle</div>
+        <label>Ad</label>
+        <input type="text" id="mgr-name" placeholder="Oyuncu adı" onkeydown="if(event.key==='Enter')mgrAddPlayer()">
+        <label>Başlangıç bakiyesi (₺)</label>
+        <input type="number" id="mgr-bal" value="15000" min="0" inputmode="numeric">
+        <button class="btn btn-blue" onclick="mgrAddPlayer()">Ekle</button>
+        <div id="mgr-ok" class="alert alert-green" style="display:none;margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🗑️ Oyuncu Çıkar</div>
+        ${!(gameState.players||[]).length ? '<div class="empty">Oyuncu yok.</div>' :
+          (gameState.players||[]).map((p,i)=>`
+            <div class="player-row">
+              <div class="player-info">
+                <div class="av ${colClass(i)}">${initials(p.name)}</div>
+                <div><div class="player-name">${p.name}</div><div class="player-sub">${fmt(p.balance)}</div></div>
+              </div>
+              <button class="btn btn-red btn-sm" onclick="confirmRemovePlayer(${i})">Çıkar</button>
+            </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔄 Bakiye Sıfırla</div>
+        <label>Kasa başlangıç bakiyesi (₺)</label>
+        <input type="number" id="reset-treasury" value="${gameState.treasury||150000}" min="0" inputmode="numeric">
+        <label>Admin başlangıç bakiyesi (₺)</label>
+        <input type="number" id="reset-admin" value="${gameState.adminSelf||15000}" min="0" inputmode="numeric">
+        <label>Oyuncu başlangıç bakiyesi (₺) <span style="color:#888;font-weight:400">(hepsi aynı olur)</span></label>
+        <input type="number" id="reset-players" value="15000" min="0" inputmode="numeric">
+        <button class="btn" style="background:#f59e0b;color:#fff;margin-top:4px" onclick="confirmResetBalances()">💰 Tüm Bakiyeleri Sıfırla</button>
+      </div>
+
+      <div class="card" style="border:1.5px solid #fee2e2">
+        <div class="card-title" style="color:#991b1b">⚠️ Tehlikeli Bölge</div>
+        <p style="font-size:13px;color:#666;margin-bottom:12px">Oyunu tamamen sıfırlar. Tüm oyuncular, bakiyeler ve işlem geçmişi silinir.</p>
+        <button class="btn btn-red" onclick="confirmResetGame()">🗑️ Oyunu Tamamen Sıfırla</button>
+      </div>
+
+    </div>`;
+}
+
+function mgrAddPlayer() {
+  const name = el('mgr-name')?.value.trim();
+  const bal  = parseInt(el('mgr-bal')?.value)||0;
+  if(!name) return;
+  const players = [...(gameState.players||[]), {name, balance:bal}];
+  gameRef.update({players}).then(()=>{
+    showOk('mgr-ok', `✓ ${name} eklendi`);
+    if(el('mgr-name')) el('mgr-name').value='';
+  });
+}
+
+function confirmRemovePlayer(idx) {
+  const p = gameState.players[idx];
+  openConfirm(
+    `${p.name} oyundan çıkarılsın mı?`,
+    `${p.name} adlı oyuncunun hesabı ve bakiyesi (${fmt(p.balance)}) silinecek.`,
+    () => {
+      const players = [...gameState.players];
+      players.splice(idx,1);
+      gameRef.update({players}).then(closeConfirm);
+    }
+  );
+}
+
+function confirmResetBalances() {
+  const treasury = parseInt(el('reset-treasury')?.value)||0;
+  const adminBal = parseInt(el('reset-admin')?.value)||0;
+  const playerBal = parseInt(el('reset-players')?.value)||0;
+  openConfirm(
+    'Tüm bakiyeler sıfırlansın mı?',
+    `Kasa: ${fmt(treasury)}, Admin: ${fmt(adminBal)}, Her oyuncu: ${fmt(playerBal)} olarak ayarlanacak. İşlem geçmişi temizlenecek.`,
+    () => {
+      const players = (gameState.players||[]).map(p=>({...p, balance:playerBal}));
+      gameRef.update({treasury, adminSelf:adminBal, players, transactions:[]}).then(closeConfirm);
+    }
+  );
+}
+
+function confirmResetGame() {
+  openConfirm(
+    'Oyun tamamen sıfırlansın mı?',
+    'Tüm oyuncular, bakiyeler ve işlem geçmişi kalıcı olarak silinecek. Bu işlem geri alınamaz!',
+    () => {
+      gameRef.set({started:false}).then(()=>{
+        closeConfirm();
+        setupPlayers=[];
+        meRole=null; meIdx=null;
+        el('topbar').style.display='none';
+        el('tabbar').style.display='none';
+        show('s-setup');
+        renderSetupPlayers();
+        // setup ekranı için admin tekrar giriş yapmış sayılsın
+        meRole='admin';
+        el('topbar').style.display='flex';
+        el('topbar-title').textContent='🏦 Monopoly Bankası';
+        el('topbar-sub').textContent='Admin Paneli';
+      });
+    }
+  );
+}
+
+function openConfirm(title, msg, onOk) {
+  el('confirm-title').textContent = title;
+  el('confirm-msg').textContent = msg;
+  el('confirm-ok').onclick = onOk;
+  el('confirm-modal').style.display='flex';
+}
+function closeConfirm() {
+  el('confirm-modal').style.display='none';
+}
+
+// ── BOOT ───────────────────────────────────────────────────
+startListening();
+</script>
+</body>
+</html>
